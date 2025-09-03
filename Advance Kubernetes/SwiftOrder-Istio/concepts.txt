@@ -1,0 +1,19 @@
+ServiceAccount
+Deployment
+Service
+Gateway
+DestinationRule
+VirtualService
+PeerAuthentication
+AuthorizationPolicy
+
+
+
+
+minikube docker image build steps
+
+- minikube -p minikube docker-env | Invoke-Expression
+- docker build -t 
+
+
+minikube tunnel

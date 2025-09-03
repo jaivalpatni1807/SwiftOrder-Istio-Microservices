@@ -1,0 +1,32 @@
+# 07-authz-policies.yaml
+
+# Policy 1: Only allow order-api to call user-service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+ name: "allow-order-to-user"
+ namespace: swift-order
+spec:
+ selector:
+   matchLabels:
+     app: user-service
+ rules:
+ - from:
+   - source:
+       # Allow requests from the service account of order-api
+       principals: ["cluster.local/ns/swift-order/sa/order-api-sa"]
+---
+# Policy 2: Only allow order-api to call inventory-service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+ name: "allow-order-to-inventory"
+ namespace: swift-order
+spec:
+ selector:
+   matchLabels:
+     app: inventory-service
+ rules:
+ - from:
+   - source:
+       principals: ["cluster.local/ns/swift-order/sa/order-api-sa"]

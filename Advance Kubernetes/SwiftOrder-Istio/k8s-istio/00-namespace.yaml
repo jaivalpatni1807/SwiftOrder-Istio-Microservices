@@ -1,0 +1,7 @@
+# 00-namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swift-order
+  labels:
+    istio-injection: "enabled"

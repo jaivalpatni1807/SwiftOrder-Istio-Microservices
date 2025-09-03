@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: swift-order
+spec:
+  ports:
+  - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-sql
+  namespace: swift-order
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      credit INT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS inventory (
+      item_id VARCHAR(50) PRIMARY KEY,
+      stock_count INT NOT NULL
+    );
+
+    INSERT INTO users (id, credit) VALUES (101, 500) ON CONFLICT DO NOTHING;
+    INSERT INTO users (id, credit) VALUES (404, 0) ON CONFLICT DO NOTHING;
+    INSERT INTO inventory (item_id, stock_count) VALUES ('A543', 25) ON CONFLICT DO NOTHING;
+    INSERT INTO inventory (item_id, stock_count) VALUES ('X999', 0) ON CONFLICT DO NOTHING;
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: swift-order
+spec:
+  serviceName: "postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: postgres-config
+        - secretRef:
+            name: postgres-secret
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: init-sql
+        configMap:
+          name: postgres-init-sql
+        
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

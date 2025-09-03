@@ -1,0 +1,235 @@
+# 01-deployments-services.yaml
+
+# Service Account for order-api
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: order-api-sa
+  namespace: swift-order
+---
+# Deployment and Service for order-api
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api-v1
+  namespace: swift-order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-api
+  template:
+    metadata:
+      labels:
+        app: order-api
+        version: v1
+    spec:
+      serviceAccountName: order-api-sa
+      containers:
+      - name: order-api
+        image: swiftorder_order:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: USER_SERVICE_URL
+          value: "http://user-service:8080"
+        - name: INVENTORY_SERVICE_URL
+          value: "http://inventory-service:5000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: swift-order
+spec:
+  selector:
+    app: order-api
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+---
+# --- User Service (v1 and v2) ---
+
+# Service Account for user-service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: user-service-sa
+  namespace: swift-order
+---
+# Common Service for both versions of user-service
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: swift-order
+spec:
+  selector:
+    app: user-service
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+# Deployment for user-service v1 (stable)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service-v1
+  namespace: swift-order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: user-service
+        version: v1
+    spec:
+      serviceAccountName: user-service-sa
+      containers:
+      - name: user-service
+        image: swiftorder_user:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: DB_HOST
+          value: "postgres.swift-order.svc.cluster.local"
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+---
+# Deployment for user-service v2 (canary)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service-v2
+  namespace: swift-order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: user-service
+        version: v2
+    spec:
+      serviceAccountName: user-service-sa
+      containers:
+      - name: user-service
+        image: swiftorder_user:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: VERSION
+          value: "v2"
+        - name: DB_HOST
+          value: "postgres.swift-order.svc.cluster.local"
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+---
+# --- Inventory Service ---
+# (ServiceAccount, Deployment, Service definitions follow the same pattern)
+
+# Service Account for Inventory Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inventory-api-sa
+  namespace: swift-order
+---
+# Service for Inventory-service
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: swift-order
+spec:
+  selector:
+    app: inventory-service
+  ports:
+  - name: http
+    port: 5000
+    targetPort: 5000
+---
+# Deployment for inventory-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service-v1
+  namespace: swift-order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+        version: v1
+    spec:
+      serviceAccountName: inventory-api-sa
+      containers:
+      - name: inventory-service
+        image: swiftorder_inventory:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: DB_HOST
+          value: "postgres.swift-order.svc.cluster.local"
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD

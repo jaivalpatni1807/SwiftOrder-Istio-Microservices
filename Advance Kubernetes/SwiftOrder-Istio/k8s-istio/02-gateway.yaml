@@ -1,0 +1,16 @@
+# 02-gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: swift-order-gateway
+  namespace: swift-order
+spec:
+  selector:
+    istio: ingressgateway # Use Istio's default ingress controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"

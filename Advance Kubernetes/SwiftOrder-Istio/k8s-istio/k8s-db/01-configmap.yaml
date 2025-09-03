@@ -1,0 +1,9 @@
+# k8s-db/01-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: swift-order
+data:
+  POSTGRES_DB: "swiftorder_db"
+  POSTGRES_USER: "admin"

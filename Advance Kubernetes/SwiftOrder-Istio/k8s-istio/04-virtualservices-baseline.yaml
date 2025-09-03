@@ -1,0 +1,36 @@
+# 04-virtualservices-baseline.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: swift-order-ingress
+  namespace: swift-order
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - swift-order-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/orders
+    route:
+    - destination:
+        host: order-api.swift-order.svc.cluster.local
+        port:
+          number: 3000
+---
+# Internal routing for user-service, sending all traffic to v1
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: user-service
+  namespace: swift-order
+spec:
+  hosts:
+  - user-service.swift-order.svc.cluster.local
+  http:
+  - route:
+    - destination:
+        host: user-service.swift-order.svc.cluster.local
+        subset: v1
+      weight: 100

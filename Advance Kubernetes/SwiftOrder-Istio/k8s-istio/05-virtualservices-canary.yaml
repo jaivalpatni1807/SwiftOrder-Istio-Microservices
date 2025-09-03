@@ -1,0 +1,20 @@
+# 05-virtualservices-canary.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: user-service # This overwrites the baseline VS
+  namespace: swift-order
+spec:
+  hosts:
+  - user-service.swift-order.svc.cluster.local
+  http:
+  # Canary Release: Send 10% of traffic to v2, 90% to v1.
+  - route:
+    - destination:
+        host: user-service.swift-order.svc.cluster.local
+        subset: v1
+      weight: 90
+    - destination:
+        host: user-service.swift-order.svc.cluster.local
+        subset: v2
+      weight: 10
